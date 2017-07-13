@@ -1,0 +1,46 @@
+{
+  "name": "rubikjs",
+  "version": "0.0.1-beta.1",
+  "description": "",
+  "main": "./lib/index.js",
+  "scripts": {
+    "lint": "fecs src test/**/*.spec.js --type=js",
+    "compile": "rm -rf lib && babel src -d lib --source-maps inline --copy-files",
+    "debug": "npm run compile && babel-node-debug lib/index.js",
+    "test": "npm run compile && _mocha --compilers js:babel-core/register --recursive",
+    "coverage": "npm run compile && babel-node babel-istanbul cover _mocha 'test/**/*.spec.@(js|es|es6)'",
+    "coverage1": "npm run compile && babel-node babel-istanbul cover _mocha -- --recursive",
+    "coveralls": "cat ./coverage/lcov.info | coveralls",
+    "sourcemap": "babel src -d lib -s",
+    "watch": "babel -w src -d lib --source-maps inline --copy-files",
+    "prepublish": "npm run compile",
+    "example": "babel-node example/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ielgnaw/hiei.git"
+  },
+  "keywords": [],
+  "author": "ielgnaw",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ielgnaw/hiei/issues"
+  },
+  "homepage": "https://github.com/ielgnaw/hiei#readme",
+  "dependencies": {
+    "chrome-launcher": "^0.3.1",
+    "chrome-remote-interface": "^0.24.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-core": "^6.25.0",
+    "babel-eslint": "^7.2.3",
+    "babel-istanbul": "^0.12.2",
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-2": "^6.24.1",
+    "chalk": "^2.0.1",
+    "debug": "^2.6.8",
+    "mocha": "^3.4.2"
+  }
+}
