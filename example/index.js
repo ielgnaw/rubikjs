@@ -1,4 +1,4 @@
 
 import Rubik from '../src';
 const rubik = new Rubik();
-console.log(rubik);
+rubik.start('https://www.baidu.com');
