@@ -5,8 +5,6 @@ const rubik = new Rubik({
     headless: false
 });
 
-console.log(rubik);
-
 rubik.start('file://' + join(__dirname, '/page/index.html'))
     .getTitle()
     // .getCurrentUrl()
