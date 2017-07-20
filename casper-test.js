@@ -4,6 +4,7 @@ casper.start('https://www.baidu.com/', function () {
         'wd': 'ajax',
     }, true);
 });
+console.log(123132);
 // casper.thenClick('input#su');
 casper.then(function() {
     this.echo('Page url is ' + this.getCurrentUrl());
