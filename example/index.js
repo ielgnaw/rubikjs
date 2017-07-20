@@ -5,11 +5,18 @@ const rubik = new Rubik({
     headless: false
 });
 
-// rubik.start('file://' + join(__dirname, '/page/index.html'))
-//     .getTitle()
-//     .result(function () {
-//         console.log(arguments);
-//     })
+rubik.start('file://' + join(__dirname, '/page/index.html'))
+    .getTitle()
+    // .getCurrentUrl()
+    // .getDOMLength()
+    // .getDOMCounters()
+    .result(ret => {
+        console.log();
+        console.log('ret', ret);
+    })
+    .catch(function () {
+        console.log(111, arguments);
+    })
 
 // 回调函数形式
 // rubik.start('file://' + join(__dirname, '/page/index.html'), () => {

@@ -41,125 +41,18 @@ const defaultOpts = {
     headless: false
 };
 
-async function sleep(fn, timestamp, ...args) {
-    await new Promise(resolve => setTimeout(resolve, timestamp));
-    return fn(...args);
-    // return await new Promise(resolve => setTimeout(resolve, timestamp));
-}
-
-// sleep(function () {
-//     console.log(arguments, 'done');
-// }, 100, {a: 1})
-
-class Test {
-    constructor(promise) {
-        this.$promise = promise || Promise.resolve();
-        this._queue = [];
-    }
-
-    async then(fn) {
-        // const s = await this._queue[0]();
-        // console.log(s);
-
-        // return Promise.all([this._queue[0](), this._queue[1](), this._queue[2]()]).then(function (resolve, reject) {
-        //     console.log(22, arguments);
-        // });
-
-        const steps = this._queue.concat();
-        const me = this;
-
-        async function next(ret = {}) {
-            const item = steps.shift();
-            if (!item) {
-                return await done(ret);
-            }
-            const s = await item();
-            return await after(s);
-        }
-
-        async function after(ret) {
-            return await next(ret);
-        }
-
-        async function done(ret) {
-            return fn.apply(me, [ret]);
-        }
-
-        next();
-    }
-
-    catch(reject) {
-        return this.then(reject);
-    }
-
-    thing1(fn) {
-        const startTime = +new Date;
-        this._queue.push(() => sleep(function () {
-            const endTime = +new Date;
-            console.log(arguments, 'thing1', endTime - startTime);
-            return endTime - startTime;
-        }, 5000, {a: 1}));
-        return this;
-        // return this.then(() => sleep(function () {
-        //     const endTime = +new Date;
-        //     console.log(arguments, 'thing1', endTime - startTime);
-        // }, 5000, {a: 1}));
-    }
-
-    thing2(fn) {
-        const startTime = +new Date;
-        this._queue.push(() => sleep(function () {
-            const endTime = +new Date;
-            console.log(arguments, 'thing2', endTime - startTime);
-            return endTime - startTime;
-        }, 2000, {a: 2}));
-        return this;
-        // return this.then(() => sleep(function () {
-        //     const endTime = +new Date;
-        //     console.log(arguments, 'thing2', endTime - startTime);
-        // }, 2000, {a: 2}));
-    }
-
-    thing3(fn) {
-        const startTime = +new Date;
-        this._queue.push(() => sleep(function () {
-            const endTime = +new Date;
-            console.log(arguments, 'thing3', endTime - startTime);
-            return endTime - startTime;
-        }, 3000, {a: 3}));
-        return this;
-        // return this.then(() => sleep(function () {
-        //     const endTime = +new Date;
-        //     console.log(arguments, 'thing3', endTime - startTime);
-        // }, 3000, {a: 3}));
-    }
-}
-
-new Test(Promise.resolve())
-    .thing1(function (_id) {
-        console.log(11111, arguments);
-    })
-    .thing2(function (_id) {
-        console.log(22222, arguments);
-    })
-    .thing3(function (_id) {
-        console.log(33333, arguments);
-    })
-    // .then(function () {
-    //     console.log(111, arguments);
-    // })
-    .catch(error => console.error(error));
-
-
 export default class Rubik {
     constructor(opts = {}) {
         // debug('send "%s" %j', 'path', {a: 1});
         this.opts = mergeDeep({}, defaultOpts, opts);
         this.opts.visible = !this.opts.headless;
 
-        this.client = new Chromy(this.opts);
+        this.proxy = new Chromy(this.opts);
 
         this._queue = [];
+
+        // 当前 rubik 实例的 catch function
+        this.catchFn = null;
     }
 
     /**
@@ -171,72 +64,87 @@ export default class Rubik {
     static addCustomDevice(cusDevices = []) {
     }
 
-    addQueue(fn) {
-        this._queue.push(fn);
+    async result(fn) {
+        const me = this;
+
+        const steps = me._queue.concat();
+        me._queue = [];
+
+        const ret = [];
+
+        async function next() {
+            const step = steps.shift();
+            if (!step) {
+                return await done();
+            }
+
+            ret.push({
+                [step.name]: await step.fn()
+            });
+
+            return await next();
+        }
+
+        async function after() {
+            return await next();
+        }
+
+        async function done() {
+            // TODO: end 判断
+            return fn(ret);
+        }
     }
 
-    result(fulfill, reject) {
-        return new Promise((success, failure) => {
-            this.run((err, result) => {
-                if (err) {
-                    failure(err);
-                }
-                else {
-                    success(result);
-                }
-            })
-        }).then(fulfill, reject);
+    async catch(reject) {
+        console.log('catchcatchcatchcatchcatch');
+        this.catchFn = reject;
     }
 
-    run(fn) {
-        debug('running');
+    start(startingUrl) {
+        debug(`'start' for ${startingUrl}`);
+        const startTime = +new Date;
+        this._queue.push({
+            name: 'start',
+            fn: () => this.proxy.start(startingUrl)
+        });
+        return this;
     }
 
-    // start(startingUrl, headers) {
-    //     debug(`queueing action 'start' for ${startingUrl}` );
-    //     headers = headers || {};
-    //     for (var key in this._headers) {
-    //         headers[key] = headers[key] || this._headers[key];
-    //     }
+    getTitle() {
+        debug('getTitle');
+        this._queue.push({
+            name: 'getTitle',
+            fn: () => this.proxy.evaluate(_ => document.title)
+        });
+        return this;
+    }
 
-    //     this.addQueue(() => {
-    //         this.client.start(startingUrl);
-    //         // self.child.call('goto', url, headers, this.options.gotoTimeout, fn);
-    //     });
+    getCurrentUrl() {
+        debug('getCurrentUrl');
+        this._queue.push({
+            name: 'getCurrentUrl',
+            fn: () => this.proxy.evaluate(_ => document.location.href)
+        });
+        return this;
+    }
 
-    //     return this;
-    // }
+    getDOMLength() {
+        debug('getDOMLength');
+        this._queue.push({
+            name: 'getDOMLength',
+            fn: () => this.proxy.evaluate(_ => document.getElementsByTagName('*').length)
+        });
+        return this;
+    }
 
-    // getTitle() {
-    //     this.addQueue(async () => {
-    //         console.log(123123);
-    //         await this.client.evaluate(_ => {
-    //             console.log(9999);
-    //             return document.title;
-    //         })
-    //     });
-    //     return this;
-    // }
-
-    // async start(startingUrl = 'about:blank', callback = null) {
-    //     const ret = await this.client.start(startingUrl);
-    //     if (callback && typeof callback === 'function') {
-    //         (async () => {
-    //             callback.call(this, ret);
-    //         })();
-    //     }
-    //     return this;
-    // }
-
-    // async getTitle(callback = null) {
-    //     const ret = await this.client.evaluate(_ => {
-    //         return document.title;
-    //     });
-    //     if (callback && typeof callback === 'function') {
-    //         (async () => {
-    //             callback.call(this, ret);
-    //         })();
-    //     }
-    //     return ret;
-    // }
+    getDOMCounters() {
+        debug('getDOMCounters');
+        this._queue.push({
+            name: 'getDOMLength',
+            fn: () => {
+                return this.proxy.client.Memory.getDOMCounters()
+            }
+        });
+        return this;
+    }
 }
