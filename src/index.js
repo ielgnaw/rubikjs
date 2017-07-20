@@ -50,9 +50,6 @@ export default class Rubik {
         this.proxy = new Chromy(this.opts);
 
         this._queue = [];
-
-        // 当前 rubik 实例的 catch function
-        this.catchFn = null;
     }
 
     /**
@@ -71,6 +68,13 @@ export default class Rubik {
         me._queue = [];
 
         const ret = [];
+
+        try {
+            await next();
+        }
+        catch (e) {
+            throw new Error(e);
+        }
 
         async function next() {
             const step = steps.shift();
@@ -95,9 +99,9 @@ export default class Rubik {
         }
     }
 
-    async catch(reject) {
-        console.log('catchcatchcatchcatchcatch');
-        this.catchFn = reject;
+    async end() {
+        await this.proxy.close();
+        return this;
     }
 
     start(startingUrl) {
@@ -105,7 +109,7 @@ export default class Rubik {
         const startTime = +new Date;
         this._queue.push({
             name: 'start',
-            fn: () => this.proxy.start(startingUrl)
+            fn: () => this.proxy.goto(startingUrl)
         });
         return this;
     }

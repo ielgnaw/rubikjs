@@ -10,13 +10,29 @@ rubik.start('file://' + join(__dirname, '/page/index.html'))
     // .getCurrentUrl()
     // .getDOMLength()
     // .getDOMCounters()
+    .start('https://github.com')
+    .getCurrentUrl()
+    .getCurrentUrl()
     .result(ret => {
+        rubik.end();
         console.log();
         console.log('ret', ret);
     })
-    .catch(function () {
-        console.log(111, arguments);
+    .catch(e => {
+        console.log(133311, e);
     })
+
+// rubik.start('https://github.com')
+//     .getCurrentUrl()
+//     // .getDOMLength()
+//     // .getDOMCounters()
+//     .result(ret => {
+//         console.log();
+//         console.log('ret', ret);
+//     })
+//     .catch(e => {
+//         console.log(333, e);
+//     })
 
 // 回调函数形式
 // rubik.start('file://' + join(__dirname, '/page/index.html'), () => {
