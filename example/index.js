@@ -6,6 +6,7 @@ const rubik = new Rubik({
 });
 
 console.log(rubik);
+console.log(123);
 
 rubik.start('file://' + join(__dirname, '/page/index.html'))
     .getTitle()
