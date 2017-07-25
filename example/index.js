@@ -1,137 +1,42 @@
 
 import {join} from 'path';
 import Rubik from '../src';
+import {readFileSync} from 'fs';
+
 const rubik = new Rubik({
-    headless: false
+    headless: false,
+    onError: e => {
+        console.log(1111, e);
+    }
 });
 
-console.log(rubik);
-console.log(123);
 
-rubik.start('file://' + join(__dirname, '/page/index.html'))
-    .getTitle()
-    // .getCurrentUrl()
-    // .getDOMLength()
-    // .getDOMCounters()
-    .start('https://github.com')
-    .getCurrentUrl()
-    .getCurrentUrl()
-    .result(ret => {
-        rubik.end();
-        console.log();
-        console.log('ret', ret);
-    })
-    .catch(e => {
-        console.log(133311, e);
-    })
+async function main() {
+    const ret = await rubik.start('file://' + join(__dirname, '/page/index.html'));
+    console.log('ret', ret);
 
-// rubik.start('https://github.com')
-//     .getCurrentUrl()
-//     // .getDOMLength()
-//     // .getDOMCounters()
-//     .result(ret => {
-//         console.log();
-//         console.log('ret', ret);
-//     })
-//     .catch(e => {
-//         console.log(333, e);
-//     })
+    const currentUrl = await rubik.getCurrentUrl();
+    console.log('currentUrl', currentUrl);
 
-// 回调函数形式
-// rubik.start('file://' + join(__dirname, '/page/index.html'), () => {
-    // 回调函数形式
-    // rubik.getTitle(ret => {
-    //     console.log('example', ret);
-    // });
+    const title = await rubik.getTitle();
+    console.log('title', title);
 
-    // promise then 形式
-    // rubik.getTitle().then(ret => {
-    //     console.log('111', ret);
-    // });
-// });
+    const clickRet = await rubik.click('button#btn');
+    console.log('clickRet', clickRet);
 
-// promise then 形式
-// rubik.start('file://' + join(__dirname, '/page/index.html')).then(() => {
-    // 回调函数形式
-    // rubik.getTitle(ret => {
-    //     console.log('example', ret);
-    // });
+    const fileContent = readFileSync(join(__dirname, './jquery.min.js'), {encoding: 'utf8'});
+    const addScriptRet = await rubik.addScript(fileContent);
+    console.log('addScriptRet', addScriptRet);
 
-    // promise then 形式
-    // rubik.getTitle().then(ret => {
-    //     console.log('111', ret);
-    // });
-// });
+    const executeScriptRet = await rubik.executeScript(() => $().jquery);
+    console.log('executeScriptRet', executeScriptRet);
 
-// async await 形式
-// async function main() {
-//     await rubik.start('file://' + join(__dirname, '/page/index.html'));
-//     // async await 形式
-//     const ret = await rubik.getTitle();
-//     console.log(ret);
+    // const ret1 = await rubik.start('https://www.baidu.com');
+    // console.log('ret1', ret1);
+    // const currentUrl1 = await rubik.getCurrentUrl();
+    // console.log('currentUrl1', currentUrl1);
+    // const title1 = await rubik.getTitle();
+    // console.log('title1', title1);
+}
 
-//     // promise then 形式
-//     rubik.getTitle().then(ret => {
-//         console.log('111', ret);
-//     });
-
-//     // 回调函数形式
-//     rubik.getTitle(ret => {
-//         console.log('example', ret);
-//     });
-// }
-// main();
-
-
-// console.log(rubik);
-// console.log(Rubik.addCustomDevice);
-// async function main() {
-    // rubik.start('file://' + join(__dirname, '/page/index.html'));
-    // const ret = rubik.getTitle().then(function () {console.log(arguments);});
-    // console.log(ret);
-// }
-// main();
-
-// const result = await chromy.evaluate(() => {
-//         return document.querySelectorAll('*').length
-//     });
-
-
-// import fs from 'fs';
-// import Chromy from 'chromy';
-
-// async function main() {
-//     // let chromy = new Chromy({
-//     //     // visible: true
-//     // });
-//     // await chromy.goto('http://ielgnaw.com/')
-//     // const result = await chromy.evaluate(() => {
-//     //     return document.querySelectorAll('*').length
-//     // });
-//     // console.log(result)
-//     // await chromy.close();
-
-//     let chromy = new Chromy()
-//     chromy.chain()
-//       .goto('https://github.com')
-//       .screenshot()
-//       .result((png) => {
-//         fs.writeFileSync('out.png', png)
-//       })
-//       .screenshotDocument() // take screenshot of whole document
-//       .result((png) => {
-//         fs.writeFileSync('out_doc.png', png)
-//       })
-//       .pdf()
-//       .result((pdf) => {
-//         fs.writeFileSync('out.pdf', pdf)
-//       })
-//       .end()
-//       .then(_ => chromy.close())
-//       .catch(e => {
-//         console.log(e)
-//         chromy.close()
-//       })
-// }
-
-// main()
+main();

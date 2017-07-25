@@ -7,8 +7,12 @@
     </head>
     <body>
         <div>111</div>
+        <button id="btn">go</button>
         <script>
             console.log(123);
+            document.querySelector('#btn').addEventListener('click', function () {
+                alert('clicked');
+            });
         </script>
     </body>
 </html>

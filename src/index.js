@@ -6,7 +6,7 @@
 import 'babel-polyfill';
 import Debug from 'debug';
 import Chromy from 'chromy';
-// import chainProxy from 'async-chain-proxy';
+import chalk from 'chalk';
 
 import {mergeDeep} from './util';
 
@@ -38,7 +38,7 @@ const defaultOpts = {
     typeInterval: 20,
     target: defaultTargetFunction,
     // 是否使用 headless 模式
-    headless: false
+    headless: true
 };
 
 export default class Rubik {
@@ -49,7 +49,8 @@ export default class Rubik {
 
         this.proxy = new Chromy(this.opts);
 
-        this._queue = [];
+        this.currentUrl = '';
+        this.isStarting = false;
     }
 
     /**
@@ -61,94 +62,178 @@ export default class Rubik {
     static addCustomDevice(cusDevices = []) {
     }
 
-    async result(fn) {
-        const me = this;
-
-        const steps = me._queue.concat();
-        me._queue = [];
-
-        const ret = [];
-
+    /**
+     * 打开页面
+     *
+     * @param {string} startingUrl 页面地址
+     *
+     * @return {Promise} 是否打开成功的结果
+     */
+    async start(startingUrl) {
+        debug(`'start' for ${startingUrl}`);
+        let ret = true;
         try {
-            await next();
+            await this.proxy.goto(startingUrl);
+            this.currentUrl = startingUrl;
+            this.isStarting = true;
         }
+        // 异常默认的处理是抛出，停止后续逻辑
         catch (e) {
+            if (this.opts.onError && typeof this.opts.onError === 'function') {
+                this.opts.onError(e);
+                return false;
+            }
+            console.log(`${chalk.red(e.stack ? e.stack : e)}`);
+            throw new Error(e);
+        }
+        return ret;
+    }
+
+    /**
+     * 获取当前页面的 url
+     *
+     * @return {Promise} Promise 结果
+     */
+    async getCurrentUrl() {
+        if (!this.isStarting) {
+            console.log(`${chalk.red('Please execute `start` method first.')}`);
+            return;
+        }
+        debug(`'getCurrentUrl' for ${this.currentUrl}`);
+        let ret = null;
+        try {
+            ret = await this.proxy.evaluate(_ => document.location.href);
+        }
+        // 异常默认的处理是抛出，停止后续逻辑
+        catch (e) {
+            if (this.opts.onError && typeof this.opts.onError === 'function') {
+                this.opts.onError(e);
+                return false;
+            }
+            console.log(`${chalk.red(e.stack ? e.stack : e)}`);
+            throw new Error(e);
+        }
+        return ret;
+    }
+
+    /**
+     * 获取当前页面的 title
+     *
+     * @return {Promise} Promise 结果
+     */
+    async getTitle() {
+        if (!this.isStarting) {
+            console.log(`${chalk.red('Please execute `start` method first.')}`);
+            return;
+        }
+        debug(`'getTitle' for ${this.currentUrl}`);
+        let ret = null;
+        try {
+            ret = await this.proxy.evaluate(_ => document.title);
+        }
+        // 异常默认的处理是抛出，停止后续逻辑
+        catch (e) {
+            if (this.opts.onError && typeof this.opts.onError === 'function') {
+                this.opts.onError(e);
+                return false;
+            }
+            console.log(`${chalk.red(e.stack ? e.stack : e)}`);
             throw new Error(e);
         }
 
-        async function next() {
-            const step = steps.shift();
-            if (!step) {
-                return await done();
+        return ret;
+    }
+
+    /**
+     * 点击页面元素
+     *
+     * @param {string} selector 页面元素选择器
+     * @param {boolean} waitPageLoad 是否等待页面加载完成，例如点击了一个跳转链接
+     *
+     * @return {Promise} Promise 结果
+     */
+    async click(selector, waitPageLoad = false) {
+        if (!this.isStarting) {
+            console.log(`${chalk.red('Please execute `start` method first.')}`);
+            return;
+        }
+        debug(`'click' in ${this.currentUrl} for ${selector}`);
+        let ret = null;
+        try {
+            ret = await this.proxy.click(selector, {waitLoadEvent: waitPageLoad});
+        }
+        // 异常默认的处理是抛出，停止后续逻辑
+        catch (e) {
+            if (this.opts.onError && typeof this.opts.onError === 'function') {
+                this.opts.onError(e);
+                return false;
             }
-
-            ret.push({
-                [step.name]: await step.fn()
-            });
-
-            return await next();
+            console.log(`${chalk.red(e.stack ? e.stack : e)}`);
+            throw new Error(e);
         }
 
-        async function after() {
-            return await next();
+        return ret;
+    }
+
+    /**
+     * 在页面中执行函数
+     *
+     * @param {Function} fn 函数，注意这里的函数是在 window 的作用域下
+     *
+     * @return {Promise} Promise 结果
+     */
+    async executeScript(fn) {
+        if (!this.isStarting) {
+            console.log(`${chalk.red('Please execute `start` method first.')}`);
+            return;
         }
+        debug(`'executeScript' in ${this.currentUrl}`);
 
-        async function done() {
-            // TODO: end 判断
-            return fn(ret);
+        let ret = null;
+        try {
+            ret = await this.proxy.evaluate(fn);
         }
-    }
-
-    async end() {
-        await this.proxy.close();
-        return this;
-    }
-
-    start(startingUrl) {
-        debug(`'start' for ${startingUrl}`);
-        const startTime = +new Date;
-        this._queue.push({
-            name: 'start',
-            fn: () => this.proxy.goto(startingUrl)
-        });
-        return this;
-    }
-
-    getTitle() {
-        debug('getTitle');
-        this._queue.push({
-            name: 'getTitle',
-            fn: () => this.proxy.evaluate(_ => document.title)
-        });
-        return this;
-    }
-
-    getCurrentUrl() {
-        debug('getCurrentUrl');
-        this._queue.push({
-            name: 'getCurrentUrl',
-            fn: () => this.proxy.evaluate(_ => document.location.href)
-        });
-        return this;
-    }
-
-    getDOMLength() {
-        debug('getDOMLength');
-        this._queue.push({
-            name: 'getDOMLength',
-            fn: () => this.proxy.evaluate(_ => document.getElementsByTagName('*').length)
-        });
-        return this;
-    }
-
-    getDOMCounters() {
-        debug('getDOMCounters');
-        this._queue.push({
-            name: 'getDOMLength',
-            fn: () => {
-                return this.proxy.client.Memory.getDOMCounters()
+        // 异常默认的处理是抛出，停止后续逻辑
+        catch (e) {
+            if (this.opts.onError && typeof this.opts.onError === 'function') {
+                this.opts.onError(e);
+                return false;
             }
-        });
-        return this;
+            console.log(`${chalk.red(e.stack ? e.stack : e)}`);
+            throw new Error(e);
+        }
+
+        return ret;
+    }
+
+    /**
+     * 向页面中注入一段脚本
+     *
+     * @param {string} scriptContent 注入的脚本内容
+     *
+     * @return {Promise} Promise 结果
+     */
+    async addScript(scriptContent) {
+        if (!this.isStarting) {
+            console.log(`${chalk.red('Please execute `start` method first.')}`);
+            return;
+        }
+        debug(`'addScript' in ${this.currentUrl}`);
+
+        let ret = null;
+        try {
+            ret = await this.proxy.evaluate(scriptContent);
+        }
+        // 异常默认的处理是抛出，停止后续逻辑
+        catch (e) {
+            if (this.opts.onError && typeof this.opts.onError === 'function') {
+                this.opts.onError(e);
+                return false;
+            }
+            console.log(`${chalk.red(e.stack ? e.stack : e)}`);
+            throw new Error(e);
+        }
+
+        return ret;
     }
 }
